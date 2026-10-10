@@ -184,56 +184,6 @@ docker compose --profile https up -d --build   # game + Postgres + Caddy on port
 Caddy gets and renews a Let's Encrypt certificate and passes the page, `/api` and the WebSocket on
 to the game. Without a domain, leave the profile off and play on `http://<server-ip>:8787`.
 
-### Play with friends over the internet (Tailscale Funnel)
-
-No domain or server needed: your own computer hosts the game, and
-[Tailscale Funnel](https://tailscale.com/kb/1223/funnel) gives it a fixed public HTTPS address for
-free. Friends only need the link, not Tailscale. Over HTTPS, Reign can be installed as an app (see
-[Installing the app](#installing-the-app)).
-
-**One-time setup.** Run these once. Tailscale starts with your computer and remembers the Funnel,
-so the address keeps working after restarts.
-
-Linux:
-
-```bash
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up                    # opens a link to sign in
-sudo tailscale funnel --bg 8787
-```
-
-Windows (PowerShell; open a new window after installing so `tailscale` is found, and run it as
-administrator if a command says access is denied):
-
-```powershell
-winget install --id Tailscale.Tailscale
-tailscale up                         # opens a link to sign in
-tailscale funnel --bg 8787
-```
-
-The first `funnel` command prints a link to turn Funnel on for your account. Open it, allow it, and
-run the command again. It then prints your address, `https://<computer>.<tailnet>.ts.net`. That
-address never changes, so friends install the app once and keep it.
-
-Tailscale asks you to sign in again about every six months. To stop that, open the
-[admin console](https://login.tailscale.com/admin/machines), pick your computer and choose
-**Disable key expiry**.
-
-**Each time you play**, start the game and leave the window open (Ctrl+C stops it):
-
-```bash
-pnpm build        # only after pulling new code
-pnpm start
-```
-
-The same two commands work in PowerShell on Windows. You need **Node 20+** and **Git** there:
-`winget install OpenJS.NodeJS.LTS Git.Git`, then use `corepack pnpm` in place of `pnpm` (or run
-`corepack enable` once as administrator).
-
-Send your friends the `https://…ts.net` address. They can play only while your computer is on and
-the game is running. To take the address offline, run `tailscale funnel --https=443 off` (with
-`sudo` on Linux).
-
 ### Installing the app
 
 Opened over HTTPS (or on `localhost`), Reign can be installed and opens in its own window. A
