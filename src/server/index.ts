@@ -1,6 +1,6 @@
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { gzip } from 'node:zlib';
+import { brotliCompressSync, constants as zlib, gzip, gzipSync } from 'node:zlib';
 import { extname, join, normalize, resolve } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { Me } from '../shared/accounts';
@@ -43,8 +43,29 @@ const MIME: Record<string, string> = {
 	'.json': 'application/json',
 	'.ico': 'image/x-icon',
 	'.mp3': 'audio/mpeg',
-	'.ogg': 'audio/ogg'
+	'.ogg': 'audio/ogg',
+	'.webmanifest': 'application/manifest+json'
 };
+
+/** Text files are sent compressed: the game's scripts shrink to about a third. */
+const COMPRESSIBLE = new Set(['.html', '.js', '.css', '.svg', '.json', '.ico', '.webmanifest']);
+/** Compressed copies by encoding, file and modification time, made once per build. */
+const compressed = new Map<string, Buffer>();
+
+function compressedFile(file: string, encoding: 'br' | 'gzip'): Buffer {
+	const key = `${encoding}:${file}:${statSync(file).mtimeMs}`;
+	let body = compressed.get(key);
+	if (!body) {
+		const raw = readFileSync(file);
+		// Brotli's top quality takes seconds on the main script and would stall running games.
+		body =
+			encoding === 'br'
+				? brotliCompressSync(raw, { params: { [zlib.BROTLI_PARAM_QUALITY]: 9 } })
+				: gzipSync(raw);
+		compressed.set(key, body);
+	}
+	return body;
+}
 
 const server = createServer(async (req, res) => {
 	const url = new URL(req.url ?? '/', 'http://x');
@@ -67,10 +88,20 @@ const server = createServer(async (req, res) => {
 	}
 	if (!existsSync(file) || statSync(file).isDirectory()) file = join(STATIC_DIR, 'index.html');
 	const ext = extname(file);
-	res.writeHead(200, {
+	const headers: Record<string, string> = {
 		'content-type': MIME[ext] ?? 'application/octet-stream',
 		'cache-control': file.includes('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache'
-	});
+	};
+	if (COMPRESSIBLE.has(ext)) {
+		const accepts = String(req.headers['accept-encoding'] ?? '');
+		const encoding = /\bbr\b/.test(accepts) ? 'br' : /\bgzip\b/.test(accepts) ? 'gzip' : null;
+		headers['vary'] = 'accept-encoding';
+		if (encoding) {
+			res.writeHead(200, { ...headers, 'content-encoding': encoding });
+			return res.end(compressedFile(file, encoding));
+		}
+	}
+	res.writeHead(200, headers);
 	createReadStream(file).pipe(res);
 });
 

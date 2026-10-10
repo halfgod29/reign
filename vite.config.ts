@@ -1,5 +1,6 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig } from 'vite';
+import { pwa } from './scripts/pwa';
 
 const serverPort = Number(process.env.PORT ?? 8787);
 
@@ -9,7 +10,7 @@ export default defineConfig(({ mode }) => {
 	return {
 		root: 'src/client',
 		publicDir: 'public',
-		plugins: [svelte()],
+		plugins: [svelte(), pwa()],
 		define: { __REIGN_OFFLINE__: JSON.stringify(offline) },
 		build: {
 			outDir: offline ? '../../dist/offline' : '../../dist/client',

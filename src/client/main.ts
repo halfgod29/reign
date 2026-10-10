@@ -21,3 +21,9 @@ async function boot() {
 	mountApp(canvas, document.getElementById('app')!);
 }
 boot();
+
+// Makes the game installable as an app and keeps its files on the device (src/client/pwa/sw.js).
+// Browsers only allow it over HTTPS or on localhost.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+	addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}

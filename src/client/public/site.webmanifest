@@ -1,7 +1,10 @@
 {
+	"id": "/",
 	"name": "Reign",
 	"short_name": "Reign",
+	"description": "A voxel strategy board game: settle, trade and build on a 3D island with friends or bots.",
 	"start_url": "/",
+	"scope": "/",
 	"display": "standalone",
 	"theme_color": "#1a0e08",
 	"background_color": "#1a0e08",
